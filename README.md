@@ -20,7 +20,9 @@ Statische Web-App ohne Build-Schritt und ohne externe Abhängigkeiten. Läuft di
 | `index.html` | Seitenstruktur |
 | `style.css` | Layout, helles und dunkles Farbschema |
 | `app.js` | Logik, Raute (SVG), Persistenz |
-| `favicon.svg` | Icon |
+| `favicon.svg` | Icon im Browser-Tab |
+| `manifest.webmanifest` | Name, Farben und Icons für die Home-Bildschirm-App |
+| `icon-180.png`, `icon-192.png`, `icon-512.png` | App-Icons (iPhone, Android) |
 | `.nojekyll` | verhindert die Jekyll-Verarbeitung auf GitHub Pages |
 | `.gitignore` | hält exportierte Daten aus dem Repository fern |
 
@@ -93,6 +95,15 @@ Beim Verbinden einer Datei und beim Import werden die Stände **zusammengeführt
 `updatedAt` ist ein Unix-Zeitstempel in Millisekunden. Das Datum ist der lokale Kalendertag des Geräts.
 
 Die Schlüssel `koerper`, `leistung`, `kontakt`, `sinn` sind interne Positionskennungen (oben, rechts, unten, links) und bleiben auch bei eigenen Namen gleich. `settings` ist optional; fehlt es oder fehlt ein Name, gilt der Standardname. Beim Zusammenführen gewinnt der neuere `settings`-Stand als Ganzes.
+
+## iPhone und iPad
+
+1. Die Seite in Safari öffnen, unten auf "Teilen" tippen, "Zum Home-Bildschirm" wählen.
+2. Die App ab dann nur noch über das Symbol auf dem Home-Bildschirm starten.
+
+Warum: In einem normalen Safari-Tab löscht iOS den Speicher einer Website, wenn sie an sieben Tagen der Safari-Nutzung nicht besucht wurde. Apps auf dem Home-Bildschirm haben einen eigenen Zähler, der durch die Nutzung der App selbst zurückgesetzt wird. Die Home-Bildschirm-App hat einen eigenen Speicher; Daten aus einem Safari-Tab vorher exportieren und in der App importieren.
+
+Sicherung: "Export JSON" öffnet auf iPhone/iPad das Teilen-Menü, dort "In Dateien sichern" (z. B. iCloud Drive). "Import JSON" liest die Datei wieder ein. Die Statuszeile zeigt das Datum der letzten Sicherung und wird nach 14 Tagen ohne Sicherung farbig markiert.
 
 ## Einschränkungen
 

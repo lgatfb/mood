@@ -87,6 +87,7 @@ h2 { font-size: 1.05rem; font-weight: 650; }
 .storage-status.warn { color: var(--soll); }
 .storage-status.error { color: var(--danger); }
 .storage-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
+.divider[hidden] { display: none; }
 .divider { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
 
 /* Buttons */
@@ -256,6 +257,17 @@ svg.dragging .r-handle.active { stroke: var(--text); }
 .empty-row td { text-align: center; color: var(--muted); padding: 24px; cursor: default; }
 
 .app-footer { color: var(--muted); font-size: 0.8rem; padding-bottom: 32px; }
+
+/* iPhone-Hinweis */
+.ios-hint { display: flex; gap: 12px; align-items: flex-start; background: var(--notice-bg); border-color: var(--notice-line); font-size: 0.9rem; }
+.ios-hint p { margin: 0; flex: 1; }
+.ios-hint[hidden] { display: none; }
+
+/* Home-Bildschirm-App: Abstand zur Statusleiste und zum Home-Indikator */
+@supports (padding: env(safe-area-inset-top)) {
+  .app-header { padding-top: env(safe-area-inset-top); }
+  .app-footer { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+}
 
 /* Toast */
 .toast {

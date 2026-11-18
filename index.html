@@ -2,10 +2,17 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Sport- und Balance-Tagebuch</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="theme-color" content="#1f6f5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Balance">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
@@ -20,7 +27,7 @@
           <button type="button" class="btn small" id="btn-file-open">Datei öffnen</button>
           <button type="button" class="btn small primary" id="btn-file-reconnect" hidden>Datei wieder verbinden</button>
           <button type="button" class="btn small ghost" id="btn-file-disconnect" hidden>Datei trennen</button>
-          <span class="divider" aria-hidden="true"></span>
+          <span class="divider" id="storage-divider" aria-hidden="true"></span>
           <button type="button" class="btn small ghost" id="btn-export-json">Export JSON</button>
           <button type="button" class="btn small ghost" id="btn-import-json">Import JSON</button>
           <button type="button" class="btn small ghost" id="btn-export-csv">Export CSV</button>
@@ -31,6 +38,10 @@
   </header>
 
   <main class="wrap">
+    <div class="card ios-hint" id="ios-hint" hidden>
+      <p><strong>Tipp fürs iPhone:</strong> In Safari unten auf "Teilen" tippen und "Zum Home-Bildschirm" wählen. Als App vom Home-Bildschirm gestartet, löscht iOS die Daten nicht nach einigen Tagen ohne Nutzung. Achtung: Die App auf dem Home-Bildschirm hat einen eigenen Speicher. Schon in Safari erfasste Daten vorher mit "Export JSON" sichern und dort mit "Import JSON" übernehmen.</p>
+      <button type="button" class="btn small ghost" id="btn-ios-hint-close">Ausblenden</button>
+    </div>
     <section class="card day-bar" aria-label="Tag auswählen">
       <button type="button" class="btn ghost" id="btn-prev" title="Vorheriger Tag">&lt;</button>
       <label class="date-field">

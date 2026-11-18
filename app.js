@@ -113,7 +113,9 @@
     labelGrid: $('label-grid'),
     btnLabelsSave: $('btn-labels-save'),
     btnLabelsReset: $('btn-labels-reset'),
-    toast: $('toast')
+    toast: $('toast'),
+    iosHint: $('ios-hint'),
+    btnIosHintClose: $('btn-ios-hint-close')
   };
 
   // ---------------------------------------------------------------------------
@@ -376,6 +378,43 @@
   function persist() {
     saveLocal();
     queueFileWrite();
+    requestPersistentStorage();
+  }
+
+  // Bittet den Browser, die Daten nicht bei Speicherknappheit zu löschen.
+  // Nicht garantiert: der Browser darf ablehnen, das Ergebnis wird nur protokolliert.
+  let persistRequested = false;
+  function requestPersistentStorage() {
+    if (persistRequested || !navigator.storage || typeof navigator.storage.persist !== 'function') return;
+    persistRequested = true;
+    navigator.storage.persisted()
+      .then((already) => (already ? true : navigator.storage.persist()))
+      .then((granted) => console.info('Dauerhafter Speicher: ' + (granted ? 'gewährt' : 'nicht gewährt')))
+      .catch(() => { /* ignorieren */ });
+  }
+
+  // ---------------------------------------------------------------------------
+  // iPhone / iPad
+  // ---------------------------------------------------------------------------
+  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const IS_STANDALONE = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const LAST_EXPORT_KEY = STORAGE_KEY + '.letzterExport';
+  const IOS_HINT_KEY = STORAGE_KEY + '.iosHinweisAus';
+
+  function getLastExport() {
+    try { return Number(localStorage.getItem(LAST_EXPORT_KEY)) || 0; } catch (e) { return 0; }
+  }
+  function setLastExport() {
+    try { localStorage.setItem(LAST_EXPORT_KEY, String(Date.now())); } catch (e) { /* ignorieren */ }
+    updateStorageStatus();
+  }
+
+  function renderIosHint() {
+    let off = false;
+    try { off = localStorage.getItem(IOS_HINT_KEY) === '1'; } catch (e) { /* ignorieren */ }
+    dom.iosHint.hidden = !IS_IOS || IS_STANDALONE || off;
   }
 
   // ---------------------------------------------------------------------------
@@ -543,19 +582,45 @@
     } else if (fsSupported) {
       el.textContent = 'Gespeichert nur im Browser. Für eine lokale Datei: "Neue Datei anlegen" oder "Datei öffnen".';
     } else {
-      el.textContent = 'Gespeichert im Browser. Direktes Schreiben in eine Datei geht nur in Chrome, Edge oder Opera; hier bitte Export/Import JSON nutzen.';
+      const last = getLastExport();
+      el.textContent = 'Gespeichert im Browser. Sicherung per "Export JSON", letzte Sicherung: ' +
+        (last ? fmtDate.format(new Date(last)) : 'noch keine') + '.';
+      if (Object.keys(data.entries).length && (!last || Date.now() - last > 14 * 864e5)) el.classList.add('warn');
     }
     dom.btnFileNew.hidden = !fsSupported || !!fileHandle;
     dom.btnFileOpen.hidden = !fsSupported || !!fileHandle;
     dom.btnFileReconnect.hidden = !pendingHandle || !!fileHandle;
     if (pendingHandle) dom.btnFileReconnect.textContent = '"' + pendingHandle.name + '" wieder verbinden';
     dom.btnFileDisconnect.hidden = !fileHandle && !pendingHandle;
+    document.getElementById('storage-divider').hidden = !fsSupported && !pendingHandle;
   }
 
   // ---------------------------------------------------------------------------
   // Export / Import
   // ---------------------------------------------------------------------------
+  /**
+   * Gibt eine Datei aus. Auf iPhone/iPad über das Teilen-Menü (dort "In Dateien sichern"),
+   * weil Downloads in Home-Bildschirm-Apps nicht zuverlässig funktionieren. Sonst klassischer Download.
+   * Liefert ein Promise, das bei Abbruch durch den Nutzer mit false endet.
+   */
   function download(filename, text, mime) {
+    if (IS_IOS && typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && typeof File === 'function') {
+      const file = new File([text], filename, { type: mime });
+      if (navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: filename })
+          .then(() => true)
+          .catch((err) => {
+            if (err && err.name === 'AbortError') return false;
+            anchorDownload(filename, text, mime);
+            return true;
+          });
+      }
+    }
+    anchorDownload(filename, text, mime);
+    return Promise.resolve(true);
+  }
+
+  function anchorDownload(filename, text, mime) {
     const blob = new Blob([text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -568,7 +633,8 @@
   }
 
   function exportJson() {
-    download(APP_ID + '-export-' + todayStr() + '.json', serialize(), 'application/json');
+    download(APP_ID + '-export-' + todayStr() + '.json', serialize(), 'application/json')
+      .then((done) => { if (done) setLastExport(); });
   }
 
   function csvCell(v) {
@@ -1356,6 +1422,10 @@
     dom.btnMoodSave.addEventListener('click', saveMood);
     dom.btnMoodDelete.addEventListener('click', deleteMood);
     dom.btnLabelsSave.addEventListener('click', saveLabels);
+    dom.btnIosHintClose.addEventListener('click', () => {
+      try { localStorage.setItem(IOS_HINT_KEY, '1'); } catch (e) { /* ignorieren */ }
+      renderIosHint();
+    });
     dom.btnLabelsReset.addEventListener('click', resetLabels);
 
     dom.filterMonth.addEventListener('change', renderTable);
@@ -1395,6 +1465,7 @@
     bindEvents();
     loadForms();
     renderAll();
+    renderIosHint();
     restoreHandle();
   }
 
