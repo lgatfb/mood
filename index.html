@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Sport- und Balance-Tagebuch</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap header-inner">
+      <h1>Sport- und Balance-Tagebuch</h1>
+      <div class="storage">
+        <p class="storage-status" id="storage-status">Lade Daten ...</p>
+        <div class="storage-actions">
+          <button type="button" class="btn small" id="btn-file-new">Neue Datei anlegen</button>
+          <button type="button" class="btn small" id="btn-file-open">Datei öffnen</button>
+          <button type="button" class="btn small primary" id="btn-file-reconnect" hidden>Datei wieder verbinden</button>
+          <button type="button" class="btn small ghost" id="btn-file-disconnect" hidden>Datei trennen</button>
+          <span class="divider" aria-hidden="true"></span>
+          <button type="button" class="btn small ghost" id="btn-export-json">Export JSON</button>
+          <button type="button" class="btn small ghost" id="btn-import-json">Import JSON</button>
+          <button type="button" class="btn small ghost" id="btn-export-csv">Export CSV</button>
+          <input type="file" id="import-input" accept=".json,application/json" hidden>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card day-bar" aria-label="Tag auswählen">
+      <button type="button" class="btn ghost" id="btn-prev" title="Vorheriger Tag">&lt;</button>
+      <label class="date-field">
+        <span class="sr-only">Datum</span>
+        <input type="date" id="date-input" required>
+      </label>
+      <button type="button" class="btn ghost" id="btn-next" title="Nächster Tag">&gt;</button>
+      <button type="button" class="btn ghost" id="btn-today">Heute</button>
+      <span class="weekday" id="weekday"></span>
+    </section>
+
+    <div class="grid">
+      <section class="card" id="sport-card">
+        <div class="card-head">
+          <h2>Sport</h2>
+          <span class="state" id="sport-state"></span>
+        </div>
+        <p class="hint">Was hast du an diesem Tag gemacht? Freitext, z. B. Sportart, Dauer, Distanz.</p>
+        <label for="sport-text" class="sr-only">Sport an diesem Tag</label>
+        <textarea id="sport-text" rows="6" placeholder="z. B. Laufen 8 km, 45 min&#10;Krafttraining Oberkörper"></textarea>
+        <div class="row">
+          <button type="button" class="btn primary" id="btn-sport-save">Speichern</button>
+          <button type="button" class="btn ghost" id="btn-sport-delete">Löschen</button>
+          <span class="kbd-hint">Strg/Cmd + Enter speichert</span>
+        </div>
+      </section>
+
+      <section class="card" id="mood-card">
+        <div class="card-head">
+          <h2>Work-Life-Balance</h2>
+          <span class="state" id="mood-state"></span>
+        </div>
+        <div class="series-toggle" role="group" aria-label="Welche Werte bearbeiten">
+          <button type="button" class="seg ist" data-series="ist" aria-pressed="true">Ist bearbeiten</button>
+          <button type="button" class="seg soll" data-series="soll" aria-pressed="false">Soll bearbeiten</button>
+        </div>
+        <p class="hint">In der Raute auf eine Achse klicken oder ziehen, oder die Regler nutzen. Skala 0 (gar nicht erfüllt) bis 10 (voll erfüllt).</p>
+        <p class="hint notice" id="prefill-note" hidden></p>
+
+        <div class="mood-layout">
+          <div class="raute-wrap">
+            <svg id="raute" viewBox="0 0 820 600" role="img" aria-label="Work-Life-Balance-Raute mit Ist- und Soll-Werten"></svg>
+            <div class="legend">
+              <span class="legend-item"><span class="swatch ist"></span>Ist (aktuell)</span>
+              <span class="legend-item"><span class="swatch soll"></span>Soll (Ziel)</span>
+            </div>
+          </div>
+
+          <div class="mood-side">
+            <table class="mood-inputs">
+              <colgroup><col class="c-area"><col><col><col class="c-diff"></colgroup>
+              <thead>
+                <tr><th scope="col">Bereich</th><th scope="col">Ist</th><th scope="col">Soll</th><th scope="col" title="Ist minus Soll">Diff.</th></tr>
+              </thead>
+              <tbody id="mood-inputs-body"></tbody>
+            </table>
+            <div class="mood-note-wrap">
+            <label class="note-field">
+              <span>Notiz (optional)</span>
+              <textarea id="mood-note" rows="3" placeholder="Was beeinflusst die Werte heute?"></textarea>
+            </label>
+            <div class="row">
+              <button type="button" class="btn primary" id="btn-mood-save">Speichern</button>
+              <button type="button" class="btn ghost" id="btn-mood-delete">Löschen</button>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <details class="label-editor">
+          <summary>Namen der Spitzen anpassen</summary>
+          <p class="hint">Leere Felder verwenden den Standardnamen. Die Werte hängen an der Position (oben, rechts, unten, links), Umbenennen ändert also keine gespeicherten Werte. Bei einer umbenannten Spitze werden die Unterbegriffe aus der Vorlage ausgeblendet.</p>
+          <div class="label-grid" id="label-grid"></div>
+          <div class="row">
+            <button type="button" class="btn primary" id="btn-labels-save">Namen übernehmen</button>
+            <button type="button" class="btn ghost" id="btn-labels-reset">Standard wiederherstellen</button>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="table-head">
+        <h2>Übersicht pro Tag</h2>
+        <div class="filters">
+          <label>
+            <span class="sr-only">Zeitraum</span>
+            <select id="filter-month"></select>
+          </label>
+          <label>
+            <span class="sr-only">Suche</span>
+            <input type="search" id="filter-text" placeholder="Suche in Sport und Notiz">
+          </label>
+        </div>
+      </div>
+      <p class="hint" id="table-summary"></p>
+      <div class="table-scroll">
+        <table class="overview">
+          <thead id="overview-head">
+            <tr>
+              <th scope="col">Datum</th>
+              <th scope="col">Sport</th>
+              <th scope="col" class="num" data-area="koerper"></th>
+              <th scope="col" class="num" data-area="leistung"></th>
+              <th scope="col" class="num" data-area="kontakt"></th>
+              <th scope="col" class="num" data-area="sinn"></th>
+              <th scope="col" class="num" title="Summe der Beträge |Ist minus Soll| über alle vier Bereiche, 0 bis 40">Abstand</th>
+              <th scope="col">Raute</th>
+              <th scope="col"><span class="sr-only">Aktionen</span></th>
+            </tr>
+          </thead>
+          <tbody id="overview-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap app-footer">
+    <p>Alle Daten bleiben auf diesem Gerät (Browser-Speicher und optional eine lokale JSON-Datei). Es werden keine Daten an einen Server gesendet.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
