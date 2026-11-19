@@ -20,28 +20,40 @@
   <header class="app-header">
     <div class="wrap header-inner">
       <h1>Sport- und Balance-Tagebuch</h1>
-      <div class="storage">
-        <p class="storage-status" id="storage-status">Lade Daten ...</p>
-        <div class="storage-actions">
-          <button type="button" class="btn small" id="btn-file-new">Neue Datei anlegen</button>
-          <button type="button" class="btn small" id="btn-file-open">Datei öffnen</button>
-          <button type="button" class="btn small primary" id="btn-file-reconnect" hidden>Datei wieder verbinden</button>
-          <button type="button" class="btn small ghost" id="btn-file-disconnect" hidden>Datei trennen</button>
-          <span class="divider" id="storage-divider" aria-hidden="true"></span>
-          <button type="button" class="btn small ghost" id="btn-export-json">Export JSON</button>
-          <button type="button" class="btn small ghost" id="btn-import-json">Import JSON</button>
-          <button type="button" class="btn small ghost" id="btn-export-csv">Export CSV</button>
-          <input type="file" id="import-input" accept=".json,application/json" hidden>
+      <details class="storage" id="storage-panel">
+        <summary>
+          <span class="storage-title">Speicher und Sicherung</span>
+          <span class="badge" id="storage-badge"></span>
+        </summary>
+        <div class="storage-body">
+          <p class="storage-status" id="storage-status">Lade Daten ...</p>
+          <div class="storage-actions">
+            <button type="button" class="btn small" id="btn-file-new">Neue Datei anlegen</button>
+            <button type="button" class="btn small" id="btn-file-open">Datei öffnen</button>
+            <button type="button" class="btn small primary" id="btn-file-reconnect" hidden>Datei wieder verbinden</button>
+            <button type="button" class="btn small ghost" id="btn-file-disconnect" hidden>Datei trennen</button>
+            <span class="divider" id="storage-divider" aria-hidden="true"></span>
+            <button type="button" class="btn small ghost" id="btn-export-json">Export JSON</button>
+            <button type="button" class="btn small ghost" id="btn-import-json">Import JSON</button>
+            <button type="button" class="btn small ghost" id="btn-export-csv">Export CSV</button>
+            <input type="file" id="import-input" accept=".json,application/json" hidden>
+          </div>
+          <p class="hint small-print">"Import JSON" fragt nach, ob vorhandene Einträge erhalten bleiben oder durch neuere ersetzt werden sollen.</p>
         </div>
-      </div>
+      </details>
     </div>
   </header>
 
   <main class="wrap">
-    <div class="card ios-hint" id="ios-hint" hidden>
-      <p><strong>Tipp fürs iPhone:</strong> In Safari unten auf "Teilen" tippen und "Zum Home-Bildschirm" wählen. Als App vom Home-Bildschirm gestartet, löscht iOS die Daten nicht nach einigen Tagen ohne Nutzung. Achtung: Die App auf dem Home-Bildschirm hat einen eigenen Speicher. Schon in Safari erfasste Daten vorher mit "Export JSON" sichern und dort mit "Import JSON" übernehmen.</p>
-      <button type="button" class="btn small ghost" id="btn-ios-hint-close">Ausblenden</button>
-    </div>
+    <details class="card ios-hint" id="ios-hint" hidden>
+      <summary>Tipp fürs iPhone: Daten dauerhaft speichern</summary>
+      <div class="ios-hint-body">
+        <p>In Safari unten auf "Teilen" tippen und "Zum Home-Bildschirm" wählen. Als App vom Home-Bildschirm gestartet, löscht iOS die Daten nicht nach einigen Tagen ohne Nutzung.</p>
+        <p>Achtung: Die App auf dem Home-Bildschirm hat einen eigenen Speicher. Schon in Safari erfasste Daten vorher mit "Export JSON" sichern und in der App mit "Import JSON" übernehmen.</p>
+        <button type="button" class="btn small ghost" id="btn-ios-hint-close">Hinweis nicht mehr anzeigen</button>
+      </div>
+    </details>
+
     <section class="card day-bar" aria-label="Tag auswählen">
       <button type="button" class="btn ghost" id="btn-prev" title="Vorheriger Tag">&lt;</button>
       <label class="date-field">
@@ -53,27 +65,58 @@
       <span class="weekday" id="weekday"></span>
     </section>
 
-    <div class="grid">
-      <section class="card" id="sport-card">
-        <div class="card-head">
-          <h2>Sport</h2>
-          <span class="state" id="sport-state"></span>
-        </div>
+    <details class="card panel" id="sport-panel">
+      <summary class="panel-head">
+        <h2>Sport</h2>
+        <span class="preview" id="sport-preview"></span>
+        <span class="state" id="sport-state"></span>
+      </summary>
+      <div class="panel-body">
         <p class="hint">Was hast du an diesem Tag gemacht? Freitext, z. B. Sportart, Dauer, Distanz.</p>
         <label for="sport-text" class="sr-only">Sport an diesem Tag</label>
-        <textarea id="sport-text" rows="6" placeholder="z. B. Laufen 8 km, 45 min&#10;Krafttraining Oberkörper"></textarea>
+        <textarea id="sport-text" rows="5" placeholder="z. B. Laufen 8 km, 45 min&#10;Krafttraining Oberkörper"></textarea>
         <div class="row">
           <button type="button" class="btn primary" id="btn-sport-save">Speichern</button>
           <button type="button" class="btn ghost" id="btn-sport-delete">Löschen</button>
           <span class="kbd-hint">Strg/Cmd + Enter speichert</span>
         </div>
-      </section>
+      </div>
+    </details>
 
-      <section class="card" id="mood-card">
-        <div class="card-head">
-          <h2>Work-Life-Balance</h2>
-          <span class="state" id="mood-state"></span>
+    <details class="card panel" id="sucht-panel">
+      <summary class="panel-head">
+        <h2>Sucht</h2>
+        <span class="preview" id="sucht-preview"></span>
+        <span class="state" id="sucht-state"></span>
+      </summary>
+      <div class="panel-body">
+        <div class="row sucht-row">
+          <label for="sucht-select">Sucht</label>
+          <select id="sucht-select">
+            <option value="">keine Angabe</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
         </div>
+        <p class="hint">Wird beim Auswählen sofort für den gewählten Tag gespeichert. "keine Angabe" entfernt den Wert.</p>
+      </div>
+    </details>
+
+    <details class="card panel" id="mood-panel">
+      <summary class="panel-head">
+        <h2>Work-Life-Balance</h2>
+        <span class="preview" id="mood-preview"></span>
+        <span class="state" id="mood-state"></span>
+      </summary>
+      <div class="panel-body">
         <div class="series-toggle" role="group" aria-label="Welche Werte bearbeiten">
           <button type="button" class="seg ist" data-series="ist" aria-pressed="true">Ist bearbeiten</button>
           <button type="button" class="seg soll" data-series="soll" aria-pressed="false">Soll bearbeiten</button>
@@ -99,14 +142,14 @@
               <tbody id="mood-inputs-body"></tbody>
             </table>
             <div class="mood-note-wrap">
-            <label class="note-field">
-              <span>Notiz (optional)</span>
-              <textarea id="mood-note" rows="3" placeholder="Was beeinflusst die Werte heute?"></textarea>
-            </label>
-            <div class="row">
-              <button type="button" class="btn primary" id="btn-mood-save">Speichern</button>
-              <button type="button" class="btn ghost" id="btn-mood-delete">Löschen</button>
-            </div>
+              <label class="note-field">
+                <span>Notiz (optional)</span>
+                <textarea id="mood-note" rows="3" placeholder="Was beeinflusst die Werte heute?"></textarea>
+              </label>
+              <div class="row">
+                <button type="button" class="btn primary" id="btn-mood-save">Speichern</button>
+                <button type="button" class="btn ghost" id="btn-mood-delete">Löschen</button>
+              </div>
             </div>
           </div>
         </div>
@@ -120,12 +163,15 @@
             <button type="button" class="btn ghost" id="btn-labels-reset">Standard wiederherstellen</button>
           </div>
         </details>
-      </section>
-    </div>
+      </div>
+    </details>
 
-    <section class="card">
-      <div class="table-head">
+    <details class="card panel" id="overview-panel">
+      <summary class="panel-head">
         <h2>Übersicht pro Tag</h2>
+        <span class="preview" id="overview-preview"></span>
+      </summary>
+      <div class="panel-body">
         <div class="filters">
           <label>
             <span class="sr-only">Zeitraum</span>
@@ -136,32 +182,45 @@
             <input type="search" id="filter-text" placeholder="Suche in Sport und Notiz">
           </label>
         </div>
+        <p class="hint" id="table-summary"></p>
+        <div class="table-scroll">
+          <table class="overview">
+            <thead id="overview-head">
+              <tr>
+                <th scope="col">Datum</th>
+                <th scope="col">Sport</th>
+                <th scope="col" class="num">Sucht</th>
+                <th scope="col" class="num" data-area="koerper"></th>
+                <th scope="col" class="num" data-area="leistung"></th>
+                <th scope="col" class="num" data-area="kontakt"></th>
+                <th scope="col" class="num" data-area="sinn"></th>
+                <th scope="col" class="num" title="Summe der Beträge |Ist minus Soll| über alle vier Bereiche, 0 bis 40">Abstand</th>
+                <th scope="col">Raute</th>
+                <th scope="col"><span class="sr-only">Aktionen</span></th>
+              </tr>
+            </thead>
+            <tbody id="overview-body"></tbody>
+          </table>
+        </div>
       </div>
-      <p class="hint" id="table-summary"></p>
-      <div class="table-scroll">
-        <table class="overview">
-          <thead id="overview-head">
-            <tr>
-              <th scope="col">Datum</th>
-              <th scope="col">Sport</th>
-              <th scope="col" class="num" data-area="koerper"></th>
-              <th scope="col" class="num" data-area="leistung"></th>
-              <th scope="col" class="num" data-area="kontakt"></th>
-              <th scope="col" class="num" data-area="sinn"></th>
-              <th scope="col" class="num" title="Summe der Beträge |Ist minus Soll| über alle vier Bereiche, 0 bis 40">Abstand</th>
-              <th scope="col">Raute</th>
-              <th scope="col"><span class="sr-only">Aktionen</span></th>
-            </tr>
-          </thead>
-          <tbody id="overview-body"></tbody>
-        </table>
-      </div>
-    </section>
+    </details>
   </main>
 
   <footer class="wrap app-footer">
     <p>Alle Daten bleiben auf diesem Gerät (Browser-Speicher und optional eine lokale JSON-Datei). Es werden keine Daten an einen Server gesendet.</p>
   </footer>
+
+  <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-title">
+    <h2 id="import-title">Daten importieren</h2>
+    <p id="import-summary"></p>
+    <ul class="import-stats" id="import-stats"></ul>
+    <div class="dialog-actions">
+      <button type="button" class="btn primary" id="btn-import-add">Nur ergänzen</button>
+      <button type="button" class="btn" id="btn-import-merge">Zusammenführen, neuerer Stand gewinnt</button>
+      <button type="button" class="btn ghost" id="btn-import-cancel">Abbrechen</button>
+    </div>
+    <p class="hint">"Nur ergänzen" übernimmt nur Einträge, die hier noch fehlen. Vorhandene Einträge bleiben unverändert.</p>
+  </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>

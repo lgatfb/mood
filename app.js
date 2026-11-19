@@ -26,7 +26,10 @@
   const IDB_KEY = 'datafile';
   const DEFAULT_FILE_NAME = 'sport-balance-daten.json';
   const SCALE_MAX = 10;
-  const DEFAULT_VALUE = 5;
+  const DEFAULT_VALUE = 10;
+  const FIELDS = ['sport', 'mood', 'sucht'];
+  const SUCHT_MIN = 1;
+  const SUCHT_MAX = 10;
 
   // Richtung jeder Achse in SVG-Koordinaten (y wächst nach unten).
   // Die Schlüssel bleiben intern fest, angezeigt wird der vom Nutzer gewählte Name
@@ -115,6 +118,20 @@
     btnLabelsReset: $('btn-labels-reset'),
     toast: $('toast'),
     iosHint: $('ios-hint'),
+    storageBadge: $('storage-badge'),
+    importDialog: $('import-dialog'),
+    importSummary: $('import-summary'),
+    importStats: $('import-stats'),
+    btnImportAdd: $('btn-import-add'),
+    btnImportMerge: $('btn-import-merge'),
+    btnImportCancel: $('btn-import-cancel'),
+    suchtSelect: $('sucht-select'),
+    suchtState: $('sucht-state'),
+    suchtPreview: $('sucht-preview'),
+    sportPreview: $('sport-preview'),
+    moodPreview: $('mood-preview'),
+    overviewPreview: $('overview-preview'),
+    moodPanel: $('mood-panel'),
     btnIosHintClose: $('btn-ios-hint-close')
   };
 
@@ -220,11 +237,21 @@
                 updatedAt: ts
               };
         }
+        if (e.sucht && typeof e.sucht === 'object') {
+          const ts = normTimestamp(e.sucht.updatedAt);
+          if (e.sucht.deleted) {
+            entry.sucht = { deleted: true, updatedAt: ts };
+          } else {
+            const v = Math.round(Number(e.sucht.value));
+            if (!Number.isFinite(v) || v < SUCHT_MIN || v > SUCHT_MAX) throw new Error('Sucht-Wert ungültig');
+            entry.sucht = { value: v, updatedAt: ts };
+          }
+        }
       } catch (err) {
         skipped++;
         continue;
       }
-      if (entry.sport || entry.mood) out.entries[date] = entry;
+      if (FIELDS.some((f) => entry[f])) out.entries[date] = entry;
     }
     return { data: out, skipped: skipped };
   }
@@ -259,15 +286,67 @@
       const a = base.entries[d] || {};
       const b = incoming.entries[d] || {};
       const e = {};
-      const s = newer(a.sport, b.sport);
-      const m = newer(a.mood, b.mood);
-      if (s) e.sport = s;
-      if (m) e.mood = m;
-      if (e.sport || e.mood) out.entries[d] = e;
+      FIELDS.forEach((f) => {
+        const v = newer(a[f], b[f]);
+        if (v) e[f] = v;
+      });
+      if (FIELDS.some((f) => e[f])) out.entries[d] = e;
     });
     const settings = newer(base.settings, incoming.settings);
     if (settings) out.settings = settings;
     return out;
+  }
+
+  /**
+   * Übernimmt aus incoming nur, was in base fehlt. Vorhandene Einträge in base
+   * (auch gelöschte) bleiben unverändert. Gilt pro Tag und Bereich.
+   */
+  function addMissing(base, incoming) {
+    const out = mergeData(base, emptyData()); // Kopie von base
+    Object.keys(incoming.entries).forEach((d) => {
+      const b = incoming.entries[d];
+      FIELDS.forEach((f) => {
+        if (!b[f]) return;
+        const a = out.entries[d];
+        if (a && a[f]) return;
+        (out.entries[d] || (out.entries[d] = {}))[f] = b[f];
+      });
+    });
+    if (!out.settings && incoming.settings) out.settings = incoming.settings;
+    return out;
+  }
+
+  function contentKey(v) {
+    if (!v || v.deleted) return null;
+    const c = Object.assign({}, v);
+    delete c.updatedAt;
+    return JSON.stringify(c);
+  }
+
+  /** Zählt für den Import-Dialog, was neu, gleich oder abweichend ist. */
+  function analyzeImport(base, incoming) {
+    const r = { days: 0, neu: 0, gleich: 0, abweichend: 0, abweichendNeuer: 0 };
+    Object.keys(incoming.entries).forEach((d) => {
+      const b = incoming.entries[d];
+      let any = false;
+      FIELDS.forEach((f) => {
+        const kb = contentKey(b[f]);
+        if (kb === null) return;
+        any = true;
+        const a = base.entries[d] && base.entries[d][f];
+        if (!a) { r.neu++; return; }
+        if (contentKey(a) === kb) { r.gleich++; return; }
+        r.abweichend++;
+        if (b[f].updatedAt > a.updatedAt) r.abweichendNeuer++;
+      });
+      if (any) r.days++;
+    });
+    return r;
+  }
+
+  function activeSucht(date) {
+    const e = data.entries[date];
+    return e && e.sucht && !e.sucht.deleted ? e.sucht : null;
   }
 
   function areaLabel(key) {
@@ -593,6 +672,22 @@
     if (pendingHandle) dom.btnFileReconnect.textContent = '"' + pendingHandle.name + '" wieder verbinden';
     dom.btnFileDisconnect.hidden = !fileHandle && !pendingHandle;
     document.getElementById('storage-divider').hidden = !fsSupported && !pendingHandle;
+
+    // Kurzfassung in der eingeklappten Zeile
+    const badge = dom.storageBadge;
+    const last = getLastExport();
+    const backupOld = Object.keys(data.entries).length && (!last || Date.now() - last > 14 * 864e5);
+    badge.className = 'badge';
+    if (fileHandle) {
+      badge.textContent = 'Datei verbunden';
+      badge.classList.add('ok');
+    } else if (pendingHandle) {
+      badge.textContent = 'Datei nicht verbunden';
+      badge.classList.add('warn');
+    } else {
+      badge.textContent = last ? 'Letzte Sicherung ' + fmtDate.format(new Date(last)) : 'Noch keine Sicherung';
+      if (backupOld) badge.classList.add('warn');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -644,14 +739,15 @@
   }
 
   function exportCsv() {
-    const header = ['Datum', 'Sport'];
+    const header = ['Datum', 'Sport', 'Sucht'];
     AREAS.forEach((a) => { header.push(areaLabel(a.key) + ' Ist', areaLabel(a.key) + ' Soll'); });
     header.push('Abstand', 'Notiz');
     const lines = [header.map(csvCell).join(';')];
     visibleDates(false).sort().forEach((d) => {
       const s = activeSport(d);
       const m = activeMood(d);
-      const row = [d, s ? s.text : ''];
+      const su = activeSucht(d);
+      const row = [d, s ? s.text : '', su ? su.value : ''];
       AREAS.forEach((a) => { row.push(m ? m.ist[a.key] : '', m ? m.soll[a.key] : ''); });
       row.push(m ? moodDistance(m) : '', m ? m.notiz : '');
       lines.push(row.map(csvCell).join(';'));
@@ -660,20 +756,56 @@
     download(APP_ID + '-' + todayStr() + '.csv', '\uFEFF' + lines.join('\r\n') + '\r\n', 'text/csv;charset=utf-8');
   }
 
+  let pendingImport = null;
+
   async function importJson(file) {
     if (!guardDirty()) return;
+    let parsed;
     try {
-      const parsed = normalizeData(JSON.parse(await file.text()));
-      const count = Object.keys(parsed.data.entries).length;
-      data = mergeData(data, parsed.data);
-      persist();
-      loadForms();
-      renderAll();
-      showToast(count + ' Tage aus "' + file.name + '" zusammengeführt.' +
-        (parsed.skipped ? ' ' + parsed.skipped + ' ungültige Einträge übersprungen.' : ''));
+      parsed = normalizeData(JSON.parse(await file.text()));
     } catch (err) {
       showToast('Import fehlgeschlagen: ' + err.message, true);
+      return;
     }
+    const r = analyzeImport(data, parsed.data);
+    pendingImport = { parsed: parsed, name: file.name };
+
+    if (typeof dom.importDialog.showModal !== 'function') {
+      // Sehr alte Browser ohne <dialog>: sicherer Weg, nur ergänzen
+      finishImport('add');
+      return;
+    }
+    dom.importSummary.textContent = '"' + file.name + '" enthält Einträge für ' + r.days +
+      (r.days === 1 ? ' Tag.' : ' Tage.') +
+      (parsed.skipped ? ' ' + parsed.skipped + ' ungültige Einträge werden übersprungen.' : '');
+    dom.importStats.textContent = '';
+    [
+      'Neu (fehlen hier bisher, werden immer übernommen): ' + r.neu,
+      'Identisch: ' + r.gleich,
+      'Abweichend von deinen Einträgen: ' + r.abweichend +
+        (r.abweichend ? ', davon in der Datei neuer: ' + r.abweichendNeuer + '. Nur diese würden beim Zusammenführen ersetzt.' : '')
+    ].forEach((t) => {
+      const li = document.createElement('li');
+      li.textContent = t;
+      dom.importStats.appendChild(li);
+    });
+    dom.btnImportMerge.hidden = r.abweichendNeuer === 0;
+    dom.importDialog.showModal();
+  }
+
+  function finishImport(mode) {
+    const p = pendingImport;
+    pendingImport = null;
+    if (dom.importDialog.open) dom.importDialog.close();
+    if (!p || mode === 'cancel') return;
+    const before = analyzeImport(data, p.parsed.data);
+    data = mode === 'merge' ? mergeData(data, p.parsed.data) : addMissing(data, p.parsed.data);
+    persist();
+    loadForms();
+    renderAll();
+    showToast(mode === 'merge'
+      ? 'Zusammengeführt: ' + before.neu + ' neu, ' + before.abweichendNeuer + ' aktualisiert.'
+      : 'Ergänzt: ' + before.neu + ' neu. Vorhandene Einträge wurden nicht verändert.');
   }
 
   // ---------------------------------------------------------------------------
@@ -698,6 +830,28 @@
   function loadForms() {
     loadSportForm();
     loadMoodDraft();
+    loadSucht();
+  }
+
+  function loadSucht() {
+    const v = activeSucht(currentDate);
+    dom.suchtSelect.value = v ? String(v.value) : '';
+  }
+
+  /** Speichert den Sucht-Wert sofort; leerer Wert entfernt ihn. */
+  function saveSucht() {
+    const raw = dom.suchtSelect.value;
+    const now = Date.now();
+    const label = fmtDate.format(parseDateStr(currentDate));
+    if (raw) {
+      setField(currentDate, 'sucht', { value: Number(raw), updatedAt: now });
+      showToast('Sucht ' + raw + ' für ' + label + ' gespeichert.');
+    } else if (data.entries[currentDate] && data.entries[currentDate].sucht) {
+      setField(currentDate, 'sucht', { deleted: true, updatedAt: now });
+      showToast('Sucht-Wert für ' + label + ' entfernt.');
+    }
+    persist();
+    renderAll();
   }
 
   function loadSportForm() {
@@ -797,6 +951,7 @@
     const now = Date.now();
     if (data.entries[date] && data.entries[date].sport) setField(date, 'sport', { deleted: true, updatedAt: now });
     if (data.entries[date] && data.entries[date].mood) setField(date, 'mood', { deleted: true, updatedAt: now });
+    if (data.entries[date] && data.entries[date].sucht) setField(date, 'sucht', { deleted: true, updatedAt: now });
     persist();
     if (date === currentDate) loadForms();
     renderAll();
@@ -1214,6 +1369,15 @@
       dom.moodState.className = 'state';
     }
 
+    // Kurzvorschau in den eingeklappten Kopfzeilen
+    const firstLine = stored ? stored.text.split('\n')[0] : '';
+    dom.sportPreview.textContent = firstLine.length > 60 ? firstLine.slice(0, 57) + '...' : firstLine;
+    dom.moodPreview.textContent = m ? 'Abstand ' + moodDistance(m) + ' von 40' : '';
+    const su = activeSucht(currentDate);
+    dom.suchtPreview.textContent = su ? 'Wert ' + su.value : '';
+    dom.suchtState.textContent = su ? 'Gespeichert' : 'Kein Eintrag';
+    dom.suchtState.className = su ? 'state saved' : 'state';
+
     if (prefillFrom && !m) {
       dom.prefillNote.hidden = false;
       dom.prefillNote.textContent = 'Werte vorbelegt aus dem Eintrag vom ' +
@@ -1239,7 +1403,7 @@
   }
 
   function visibleDates(applyFilter) {
-    let dates = Object.keys(data.entries).filter((d) => activeSport(d) || activeMood(d));
+    let dates = Object.keys(data.entries).filter((d) => activeSport(d) || activeMood(d) || activeSucht(d));
     if (applyFilter) {
       const month = dom.filterMonth.value;
       const q = dom.filterText.value.trim().toLowerCase();
@@ -1288,8 +1452,8 @@
     if (!dates.length) {
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      const cell = td('', Object.keys(data.entries).length ? 'Keine Einträge für diesen Filter.' : 'Noch keine Einträge. Wähle oben einen Tag und speichere Sport oder Balance.');
-      cell.colSpan = 9;
+      const cell = td('', Object.keys(data.entries).length ? 'Keine Einträge für diesen Filter.' : 'Noch keine Einträge. Wähle oben einen Tag und speichere Sport, Sucht oder Balance.');
+      cell.colSpan = 10;
       tr.appendChild(cell);
       body.appendChild(tr);
     }
@@ -1297,10 +1461,14 @@
     let sportDays = 0;
     let moodDays = 0;
     let distSum = 0;
+    let suchtDays = 0;
+    let suchtSum = 0;
 
     dates.forEach((d) => {
       const s = activeSport(d);
       const m = activeMood(d);
+      const su = activeSucht(d);
+      if (su) { suchtDays++; suchtSum += su.value; }
       if (s) sportDays++;
       if (m) { moodDays++; distSum += moodDistance(m); }
 
@@ -1325,6 +1493,10 @@
         sportCell.appendChild(note);
       }
       tr.appendChild(sportCell);
+
+      const suchtCell = td('num', su ? String(su.value) : '-');
+      if (!su) suchtCell.classList.add('empty');
+      tr.appendChild(suchtCell);
 
       AREAS.forEach((a) => {
         const cell = td('num');
@@ -1366,9 +1538,12 @@
     });
 
     const parts = [dates.length + (dates.length === 1 ? ' Tag' : ' Tage') + ' angezeigt',
-      sportDays + ' mit Sport', moodDays + ' mit Balance-Eintrag'];
+      sportDays + ' mit Sport', suchtDays + ' mit Sucht-Wert', moodDays + ' mit Balance-Eintrag'];
+    if (suchtDays) parts.push('mittlerer Sucht-Wert: ' + (suchtSum / suchtDays).toFixed(1).replace('.', ','));
     if (moodDays) parts.push('mittlerer Abstand Ist zu Soll: ' + (distSum / moodDays).toFixed(1).replace('.', ',') + ' von 40');
     dom.tableSummary.textContent = parts.join(', ') + '.';
+    const total = visibleDates(false).length;
+    dom.overviewPreview.textContent = total + (total === 1 ? ' Tag erfasst' : ' Tage erfasst');
   }
 
   function renderAll() {
@@ -1422,6 +1597,13 @@
     dom.btnMoodSave.addEventListener('click', saveMood);
     dom.btnMoodDelete.addEventListener('click', deleteMood);
     dom.btnLabelsSave.addEventListener('click', saveLabels);
+    dom.suchtSelect.addEventListener('change', saveSucht);
+    dom.btnImportAdd.addEventListener('click', () => finishImport('add'));
+    dom.btnImportMerge.addEventListener('click', () => finishImport('merge'));
+    dom.btnImportCancel.addEventListener('click', () => finishImport('cancel'));
+    dom.importDialog.addEventListener('cancel', () => { pendingImport = null; });
+    // Beschriftungen der Raute lassen sich nur im sichtbaren Zustand exakt vermessen
+    dom.moodPanel.addEventListener('toggle', () => { if (dom.moodPanel.open) layoutLabels(); });
     dom.btnIosHintClose.addEventListener('click', () => {
       try { localStorage.setItem(IOS_HINT_KEY, '1'); } catch (e) { /* ignorieren */ }
       renderIosHint();

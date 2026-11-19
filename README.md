@@ -4,11 +4,13 @@ Statische Web-App ohne Build-Schritt und ohne externe Abhängigkeiten. Läuft di
 
 ## Funktionen
 
+- **Aufklappbare Bereiche:** Sport, Sucht, Work-Life-Balance, Übersicht sowie "Speicher und Sicherung" und der iPhone-Hinweis sind beim Start eingeklappt. Die Kopfzeile zeigt eine Kurzfassung (z. B. erste Zeile des Sport-Eintrags, Sucht-Wert, Abstand der Raute).
 - **Sport pro Tag:** Freitext für jeden Kalendertag (Sportart, Dauer, Distanz usw.).
+- **Sucht pro Tag:** Auswahl 1 bis 10, wird beim Auswählen sofort gespeichert. "keine Angabe" entfernt den Wert.
 - **Work-Life-Balance-Raute:** vier Bereiche (Körper, Leistung/Arbeit, Kontakt, Sinn) mit Ist- und Soll-Wert auf einer Skala von 0 bis 10. Eingabe per Klick oder Ziehen in der Raute oder über Regler. Optional eine Notiz pro Tag.
 - **Eigene Namen für die vier Spitzen:** unter "Namen der Spitzen anpassen". Leere Felder nutzen die Standardnamen (Körper, Leistung/Arbeit, Kontakt, Sinn). Die Werte hängen an der Position (oben, rechts, unten, links), Umbenennen ändert also keine gespeicherten Werte. Bei einer umbenannten Spitze werden die Unterbegriffe aus der Vorlage ausgeblendet. Lange Namen (bis 30 Zeichen) werden in der Raute auf zwei Zeilen umbrochen bzw. verkleinert. Die Namen werden mit den Daten gespeichert und sind damit auch in Datei und Export enthalten.
 - **Übersichtstabelle:** ein Eintrag pro Tag mit Sport, Ist/Soll je Bereich, Abstand und Mini-Raute. Filter nach Monat und Freitextsuche. Klick auf eine Zeile öffnet den Tag zum Bearbeiten.
-- **Vorbelegung:** Ein neuer Tag übernimmt die Raute des letzten erfassten Tages als Startwert. Gespeichert wird erst mit "Speichern".
+- **Vorbelegung:** Ein neuer Tag übernimmt die Raute des letzten erfassten Tages als Startwert. Gibt es noch keinen, stehen alle Werte auf 10. Gespeichert wird erst mit "Speichern".
 - **Export:** JSON (vollständige Sicherung) und CSV (Semikolon, UTF-8 mit BOM, öffnet direkt in Excel mit deutschen Einstellungen).
 
 "Abstand" ist die Summe der Beträge |Ist minus Soll| über alle vier Bereiche (0 bis 40). 0 bedeutet: Ist entspricht in allen Bereichen dem Soll.
@@ -62,7 +64,12 @@ GitHub Pages liefert nur statische Dateien aus und kann nichts speichern. Die Da
 2. **Lokale JSON-Datei (optional, nur Chrome, Edge, Opera am Desktop):** Über "Neue Datei anlegen" oder "Datei öffnen" wird eine Datei verbunden. Ab dann wird jede Änderung zusätzlich direkt in diese Datei geschrieben. Die App merkt sich die Datei; nach einem Browser-Neustart reicht ein Klick auf "wieder verbinden", weil der Browser die Schreiberlaubnis aus Sicherheitsgründen erneut abfragt.
 3. **Export/Import JSON (alle Browser):** manuelle Sicherung bzw. Übertragung auf ein anderes Gerät.
 
-Beim Verbinden einer Datei und beim Import werden die Stände **zusammengeführt**, nicht überschrieben: pro Tag und pro Bereich (Sport, Balance) gewinnt der neuere Zeitstempel. Gelöschte Einträge bleiben als Löschmarker erhalten, damit sie durch einen älteren Import nicht wieder auftauchen. Eine Datei, die kein gültiges Format dieser App hat, wird nicht verändert.
+Beim **Import JSON** zeigt ein Dialog, wie viele Einträge neu, identisch oder abweichend sind, und bietet zwei Wege:
+
+- **Nur ergänzen** (empfohlen, z. B. beim Kopieren auf ein zweites Gerät): übernimmt nur Einträge, die auf diesem Gerät fehlen. Vorhandene Einträge, auch gelöschte, bleiben unverändert.
+- **Zusammenführen:** pro Tag und Bereich (Sport, Sucht, Balance) gewinnt der neuere Zeitstempel. Der Knopf erscheint nur, wenn die Datei tatsächlich neuere abweichende Einträge enthält.
+
+Beim Verbinden einer lokalen Datei wird immer zusammengeführt: pro Tag und pro Bereich gewinnt der neuere Zeitstempel. Gelöschte Einträge bleiben als Löschmarker erhalten, damit sie durch einen älteren Import nicht wieder auftauchen. Eine Datei, die kein gültiges Format dieser App hat, wird nicht verändert.
 
 ### Datenformat
 
@@ -78,6 +85,7 @@ Beim Verbinden einer Datei und beim Import werden die Stände **zusammengeführt
   "entries": {
     "2026-11-17": {
       "sport": { "text": "Laufen 8 km, 45 min", "updatedAt": 1795034880020 },
+      "sucht": { "value": 4, "updatedAt": 1795034880100 },
       "mood": {
         "ist":  { "koerper": 8, "leistung": 3, "kontakt": 6, "sinn": 5 },
         "soll": { "koerper": 5, "leistung": 5, "kontakt": 5, "sinn": 9 },
